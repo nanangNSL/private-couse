@@ -2,81 +2,57 @@ const express = require('express')
 const app = express()
 const port = 3000
 const bodyParser = require('body-parser')
+const db = require('./connection')
 
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-    console.log(req.body)
+app.get('/',async (req, res) => {
     try {
-        if(Object.keys(req?.body).length > 0){
-            let data = req?.body?.data;
-            if(data){
-                let conversionKeNumber = Number(data);
-                let initial = 0;
-                let result = [];
-                for(initial; initial < conversionKeNumber; initial++){
-                    let data = initial+1
-                    result.push("data ke-" + data);
-                }
-                res.send(result);
-            }
-        }else{
-            res.status(400).send("Data tidak boleh kosong");
+        let data = await db.query("SELECT * FROM users ORDER BY userID ASC")
+        let message = {
+            status : 200,
+            message : "Data Success",
+            data : data.rows,
+            total: data.rowCount
         }
+        res.send(message)
     } catch (error) {
         res.send(error)
     }
-   
 })
 
 
-app.post("/route/post", (req, res) => {
-    // res.send("Ini Post")
-    const data = [
-        {nama : "Bill gates"},
-        {nama : "Steve jobs"},
-        {nama:  "Mark zuckerberg"},
-        {nama: "Warren Buffet"},
-    ]
-    let body =  req.body;
-    console.log(body)
-    if(body){
-        data.push(body)
-        res.status(200).send(data)
-    }else{
-        res.status(400).send("Data tidak boleh kosong");
+app.post("/route/post", async (req, res) => {
+    try {
+        let name = req.body?.name
+        const data =  await db.query("INSERT INTO users (name) VALUES ($1) RETURNING *", [name]);
+        console.log(data)
+        let message = {
+            data: data?.rows,
+            total: data?.rowCount,
+            status: 200,
+            message: "Data Success",
+        }
+        res.send(message)
+    } catch (error) {
+        res.send(error)
     }
 })
 
-app.put("/route/put/:ID", (req, res) => {
-    const dataSource = [
-        {ID: 1, nama : "Bill gates"},
-        {ID: 2, nama : "Steve jobs"},
-        {ID: 3, nama:  "Mark zuckerberg"},
-        {ID: 4, nama: "Warren Buffet"},
-    ]
+app.put("/route/put/:ID",async (req, res) => {
     try {
-        let paramID = req.params.ID;
-        let newData = req.body;
-        if(paramID){
-            dataSource.find((data, index) => {
-                if(data.ID == paramID){
-                    let format = {
-                        ID : Number(paramID),
-                        nama:  newData?.nama
-                    }
-                    dataSource[index] = format;
-                    res.send(dataSource);
-                }else{
-                    new Error(`Data dengan ID ${paramID} tidak ditemukan`)
-                }
-            })
-           
-        }else{
-            new Error("Data tidak boleh kosong")
+        let IDS = req?.params?.ID;
+        let name = req?.body?.name;
+        let data = await  db.query("UPDATE users SET name = $1 WHERE userID = $2 RETURNING *", [name, IDS]);
+        let message = {
+            data: data?.rows,
+            total: data?.rowCount,
+            status: 200,
+            message: "Data Success",
         }
+        res.send(message)
     } catch (error) {
-        res.send(error)
+        
     }
 })
 
@@ -84,25 +60,20 @@ app.patch("/route/patch", (req, res) => {
     res.send("Ini Patch")
 })
 
-app.delete("/route/delete/:IDS", (req, res) => {
+app.delete("/route/delete/:IDS", async (req, res) => {
     // delete action
-
-    const dataSource = [
-        {ID: 1, nama : "Bill gates"},
-        {ID: 2, nama : "Steve jobs"},
-        {ID: 3, nama:  "Mark zuckerberg"},
-        {ID: 4, nama: "Warren Buffet"},
-    ]
-    let ID =  req?.params?.IDS;
     try {
-        let filter = dataSource.filter((data) => data.ID != ID);
-        let format ={
-            dataLama : dataSource,
-            dataBaru : filter
+        let IDS = req?.params?.IDS;
+        let data = await db.query("DELETE FROM users WHERE userID = $1 RETURNING *", [IDS]);
+        let message = {
+            data: data?.rows,
+            total: data?.rowCount,
+            status: 200,
+            message: "Data Success Deleted",
         }
-        res.send(format);
+        res.send(message)
     } catch (error) {
-        res.send(error)
+        
     }
 })
 
